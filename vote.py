@@ -9,13 +9,10 @@ app = Flask(__name__)
 
 memory = {}
 
-# @app.get("/")
-# #@app.get('/hello/<str:name>')
-# def render_index(name=None):
-#     return render_template('index.html', name={escape(name)})
-
 
 @app.get("/")
+@app.get("/vote")
+@app.get("/result")
 @app.get("/:surveyId")
 def render_index():
     # returns index; or if surveyId is passed in the url, returns the number of options (saved in memory when the survey was created)
@@ -28,7 +25,7 @@ def render_index():
 
 
 @app.errorhandler(404)
-def not_found():
+def not_found(error):
     # manages 404 errors
     return render_template('error.html'), 404
 
@@ -60,6 +57,7 @@ def collect_votes():
                         memory[survey_id]['votes'][index] += value
                     else:
                         memory[survey_id]['votes'][index] = value
+                memory[survey_id]['numberVotes'] += 1
                 return '<h1>Thank you!</h1>'
             return '<h1>Missing vote data</h1>'
         return '<h1>Wrong surveyId</h1>'
@@ -68,7 +66,13 @@ def collect_votes():
 @app.get('/result')
 def return_votes():
     #returns json object {numberVotes:int,votes:int}
-    pass
+    if request.args.get('surveyId'):
+        survey_id = request.args.get('surveyId')
+        if memory.get(survey_id):
+            number_votes = memory[survey_id]['numberVotes']
+            result = memory[survey_id]['votes']
+            return {"numberVotes": number_votes, "votes": result}
+        return '<h1>Wrong surveyId</h1>'
 
     
 with app.test_request_context('/generate-qr-code', method='POST'):
