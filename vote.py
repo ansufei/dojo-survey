@@ -1,14 +1,28 @@
 from flask import Flask
 from flask import render_template
 from flask import request
-from markupsafe import escape
 import uuid
 import datetime
+import pytz
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 
 memory = {}
 
+def clean_outdated_surveys():
+    to_remove = []
+    if memory:
+        for survey in memory.keys():
+            if memory[survey].get('createdDate') < datetime.datetime.now(tz=pytz.timezone("Europe/Paris")) - datetime.timedelta(minutes=10):
+                to_remove.append(survey)
+    for k in to_remove:
+        memory.pop(survey,None)
+    return memory
+
+sched = BackgroundScheduler(daemon=True)
+sched.add_job(clean_outdated_surveys,'interval',seconds=10)
+sched.start()
 
 @app.get("/")
 @app.get("/vote")
@@ -37,7 +51,7 @@ def number_of_options():
         numberOptions = request.json.get('numberOptions')  
         survey_id = uuid.uuid4().hex
         memory[survey_id] = {}
-        memory.get(survey_id)['createdDate'] = datetime.datetime.now()
+        memory.get(survey_id)['createdDate'] = datetime.datetime.now(tz=pytz.timezone("Europe/Paris"))
         memory.get(survey_id)['numberOptions'] = numberOptions 
         memory.get(survey_id)['votes'] = {}
         memory.get(survey_id)['numberVotes'] = 0  
@@ -60,7 +74,7 @@ def collect_votes():
                 memory[survey_id]['numberVotes'] += 1
                 return '<h1>Thank you!</h1>'
             return '<h1>Missing vote data</h1>'
-        return '<h1>Wrong surveyId</h1>'
+        return '<h1>Wrong surveyId or survey expired</h1>'
     return '<h1>Missing surveyId</h1>'
         
 @app.get('/result')
@@ -72,7 +86,10 @@ def return_votes():
             number_votes = memory[survey_id]['numberVotes']
             result = memory[survey_id]['votes']
             return {"numberVotes": number_votes, "votes": result}
-        return '<h1>Wrong surveyId</h1>'
+        return '<h1>Wrong surveyId or survey expired</h1>'
+    
+if __name__ == "__main__":
+    app.run()
 
     
 with app.test_request_context('/generate-qr-code', method='POST'):
