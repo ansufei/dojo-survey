@@ -27,7 +27,7 @@ sched.start()
 @app.get("/")
 @app.get("/vote")
 @app.get("/result")
-@app.get("/:surveyId")
+@app.get("/numberoptions")
 def render_index():
     # returns index; or if surveyId is passed in the url, returns the number of options (saved in memory when the survey was created)
     if request.args.get('surveyId'):
@@ -77,7 +77,7 @@ def collect_votes():
         return '<h1>Wrong surveyId or survey expired</h1>'
     return '<h1>Missing surveyId</h1>'
         
-@app.get('/result')
+@app.get('/results')
 def return_votes():
     #returns json object {numberVotes:int,votes:int}
     if request.args.get('surveyId'):
